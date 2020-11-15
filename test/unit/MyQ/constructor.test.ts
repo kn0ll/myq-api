@@ -1,4 +1,4 @@
-const MyQ = require('../../../src/MyQ.js');
+import MyQ from '../../../src';
 
 test('fails when email parameter is specified', async () => {
   expect(() => new MyQ('email', undefined)).toThrow(

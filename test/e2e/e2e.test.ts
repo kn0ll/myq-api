@@ -1,4 +1,21 @@
-const MyQ = require('../../src/MyQ.js');
+import MyQ from '../../src';
+
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      MYQ_EMAIL?: string;
+      MYQ_PASSWORD?: string;
+    }
+  }
+}
+
+function expectEnv(value: string | undefined) {
+  if (value === undefined) {
+    expect(value).toBeDefined();
+  }
+
+  return value;
+}
 
 test('login() fails when credentials are incorrect', async () => {
   const account = new MyQ();
@@ -10,11 +27,15 @@ test('login() fails when credentials are incorrect', async () => {
 });
 
 test('login() succeeds when credentials are correct', async () => {
-  expect(process.env.MYQ_EMAIL).toBeDefined();
-  expect(process.env.MYQ_PASSWORD).toBeDefined();
+  const email = expectEnv(process.env.MYQ_EMAIL);
+  const password = expectEnv(process.env.MYQ_EMAIL);
+
+  if (!email || !password) {
+    return;
+  }
 
   const account = new MyQ();
-  const promise = account.login(process.env.MYQ_EMAIL, process.env.MYQ_PASSWORD);
+  const promise = account.login(email, password);
 
   await expect(promise).resolves.toEqual(
     expect.objectContaining({
@@ -25,11 +46,15 @@ test('login() succeeds when credentials are correct', async () => {
 });
 
 test('getAccountId() succeeds', async () => {
-  expect(process.env.MYQ_EMAIL).toBeDefined();
-  expect(process.env.MYQ_PASSWORD).toBeDefined();
+  const email = expectEnv(process.env.MYQ_EMAIL);
+  const password = expectEnv(process.env.MYQ_EMAIL);
+
+  if (!email || !password) {
+    return;
+  }
 
   const account = new MyQ();
-  await account.login(process.env.MYQ_EMAIL, process.env.MYQ_PASSWORD);
+  await account.login(email, password);
   const promise = account._getAccountId();
 
   await expect(promise).resolves.toEqual(
@@ -41,11 +66,15 @@ test('getAccountId() succeeds', async () => {
 });
 
 test('getDevices() succeeds', async () => {
-  expect(process.env.MYQ_EMAIL).toBeDefined();
-  expect(process.env.MYQ_PASSWORD).toBeDefined();
+  const email = expectEnv(process.env.MYQ_EMAIL);
+  const password = expectEnv(process.env.MYQ_EMAIL);
+
+  if (!email || !password) {
+    return;
+  }
 
   const account = new MyQ();
-  await account.login(process.env.MYQ_EMAIL, process.env.MYQ_PASSWORD);
+  await account.login(email, password);
   const promise = account.getDevices();
 
   await expect(promise).resolves.toEqual(

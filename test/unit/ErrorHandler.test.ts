@@ -1,7 +1,7 @@
-const axios = require('axios');
-const AxiosMockAdapter = require('axios-mock-adapter');
+import axios from 'axios';
+import AxiosMockAdapter from 'axios-mock-adapter';
 
-const MyQ = require('../../src/MyQ.js');
+import MyQ from '../../src';
 
 const axiosMock = new AxiosMockAdapter(axios);
 
