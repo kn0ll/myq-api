@@ -1,5 +1,11 @@
-const constants = require('./constants');
-const MyQError = require('./MyQError');
+import { AxiosError } from 'axios';
+
+import constants from "./constants";
+import MyQError from "./MyQError";
+
+type MyQRequestError = AxiosError<{
+  code: string;
+}>;
 
 /**
  * An interface for grouping related utilties for error handling in the myQ API.
@@ -10,7 +16,7 @@ class ErrorHandler {
    *
    * @param {object} error axios error: https://github.com/axios/axios#handling-errors
    */
-  static handleServiceError(error) {
+  static handleServiceError(error: MyQRequestError) {
     if (error.response) {
       if (error.response.data) {
         if (error.response.data.code === '400.301') {
@@ -69,4 +75,4 @@ class ErrorHandler {
   }
 }
 
-module.exports = ErrorHandler;
+export default ErrorHandler;

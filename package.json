@@ -30,6 +30,7 @@
     "url": "git+https://github.com/thomasmunduchira/myq-api.git"
   },
   "scripts": {
+    "typecheck": "tsc --noEmit -p .",
     "lint": "eslint --ignore-path .gitignore ./",
     "fix": "eslint --fix  --ignore-path .gitignore ./",
     "test": "jest test/unit",
@@ -57,7 +58,8 @@
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "^3.1.4",
     "jest": "^26.4.1",
-    "prettier": "^2.0.5"
+    "prettier": "^2.0.5",
+    "typescript": "^4.0.5"
   },
   "engines": {
     "node": ">=10"

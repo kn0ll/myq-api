@@ -1,11 +1,11 @@
-const axios = require('axios');
-const axiosDebugLog = require('axios-debug-log');
-const debug = require('debug')('myq-api'); // the latter parameter specified here is the custom logger name
+import axios, { AxiosRequestConfig } from 'axios';
+import * as axiosDebugLog from 'axios-debug-log';
+import debug from 'debug';
 
-const actions = require('./actions');
-const constants = require('./constants');
-const ErrorHandler = require('./ErrorHandler');
-const MyQError = require('./MyQError');
+import actions from './actions';
+import constants from './constants';
+import ErrorHandler  from './ErrorHandler';
+import MyQError from './MyQError';
 
 // Log axios requests, responses, and errors.
 axiosDebugLog({
@@ -19,12 +19,24 @@ axiosDebugLog({
     axiosDebug('Service error:', error);
   },
 });
-axiosDebugLog.addLogger(axios, debug);
+axiosDebugLog.addLogger(axios, debug('myq-api'));
+
+interface Device {
+  serial_number: string;
+  state: { [key: string]: unknown; }
+};
 
 /**
  * An easy-to-use interface for interacting with myQ devices.
  */
 class MyQ {
+  public static actions = actions;
+  public static constants = constants;
+
+  private _securityToken: string | null = null; // used for authenticating service requests
+  private _accountId: string | null = null; // used for identifying an account in service requests
+  private _devices?: Device[] = []; // used for caching devices in order to check properties that are not likely to become stale
+
   /**
    * Initialize the MyQ API.
    *
@@ -37,17 +49,13 @@ class MyQ {
    * Specify credentials through login() instead.
    * @throws {MyQError} INVALID_ARGUMENT
    */
-  constructor(_emailDeprecated, _passwordDeprecated) {
+  constructor(_emailDeprecated?: string, _passwordDeprecated?: string) {
     if (_emailDeprecated !== undefined || _passwordDeprecated !== undefined) {
       throw new MyQError(
         'Email and password should be specified in login() rather than constructor.',
         constants.codes.INVALID_ARGUMENT
       );
     }
-
-    this._securityToken = null; // used for authenticating service requests
-    this._accountId = null; // used for identifying an account in service requests
-    this._devices = []; // used for caching devices in order to check properties that are not likely to become stale
   }
 
   /**
@@ -70,7 +78,7 @@ class MyQ {
    * @throws {MyQError} AUTHENTICATION_FAILED_ONE_TRY_LEFT
    * @throws {MyQError} AUTHENTICATION_FAILED_LOCKED_OUT
    */
-  async login(email, password) {
+  async login(email: string, password: string) {
     if (email === undefined) {
       throw new MyQError('Email parameter is not specified.', constants.codes.INVALID_ARGUMENT);
     }
@@ -133,13 +141,14 @@ class MyQ {
    * @throws {MyQError} INVALID_SERVICE_RESPONSE
    */
   async getDevices() {
-    if (this._accountId == null) {
+    let accountId = this._accountId;
+    if (accountId == null) {
       // Fetch the account ID if we have not already.
-      await this._getAccountId();
+      accountId = (await this._getAccountId()).accountId;
     }
     const getDevicesServiceResponse = await this._executeServiceRequest({
       baseURL: constants._baseUrls.device,
-      url: constants._routes.getDevices.replace('{accountId}', this._accountId),
+      url: constants._routes.getDevices.replace('{accountId}', accountId),
       method: 'get',
     });
     if (
@@ -152,11 +161,13 @@ class MyQ {
         constants.codes.INVALID_SERVICE_RESPONSE
       );
     }
-    this._devices = getDevicesServiceResponse.data.items;
+    // TODO: we can avoid casting by properly typing `getDevicesServiceResponse`
+    const devices = getDevicesServiceResponse.data.items as Device[];
+    this._devices = devices;
 
     return {
       code: constants.codes.OK,
-      devices: this._devices,
+      devices,
     };
   }
 
@@ -174,7 +185,7 @@ class MyQ {
    * @throws {MyQError} INVALID_SERVICE_RESPONSE
    * @throws {MyQError} DEVICE_NOT_FOUND
    */
-  async getDevice(serialNumber) {
+  async getDevice(serialNumber: string) {
     if (serialNumber === undefined) {
       throw new MyQError(
         'Serial number parameter is not specified.',
@@ -222,7 +233,7 @@ class MyQ {
    * @throws {MyQError} DEVICE_NOT_FOUND
    * @throws {MyQError} INVALID_DEVICE
    */
-  async getDoorState(serialNumber) {
+  async getDoorState(serialNumber: string) {
     if (serialNumber === undefined) {
       throw new MyQError(
         'Serial number parameter is not specified.',
@@ -267,7 +278,7 @@ class MyQ {
    * @throws {MyQError} DEVICE_NOT_FOUND
    * @throws {MyQError} INVALID_DEVICE
    */
-  async getLightState(serialNumber) {
+  async getLightState(serialNumber: string) {
     if (serialNumber === undefined) {
       throw new MyQError(
         'Serial number parameter is not specified.',
@@ -313,7 +324,7 @@ class MyQ {
    * @throws {MyQError} DEVICE_NOT_FOUND
    * @throws {MyQError} INVALID_DEVICE
    */
-  async setDoorState(serialNumber, action) {
+  async setDoorState(serialNumber: string, action: Symbol) {
     if (serialNumber === undefined) {
       throw new MyQError(
         'Serial number parameter is not specified.',
@@ -388,7 +399,7 @@ class MyQ {
    * @throws {MyQError} DEVICE_NOT_FOUND
    * @throws {MyQError} INVALID_DEVICE
    */
-  async setLightState(serialNumber, action) {
+  async setLightState(serialNumber: string, action: Symbol) {
     if (serialNumber === undefined) {
       throw new MyQError(
         'Serial number parameter is not specified.',
@@ -479,11 +490,13 @@ class MyQ {
         constants.codes.INVALID_SERVICE_RESPONSE
       );
     }
-    this._accountId = getAccountServiceResponse.data.Account.Id;
+    // TODO: we can avoid casting by properly typing `getAccountServiceResponse`
+    const accountId = getAccountServiceResponse.data.Account.Id as string;
+    this._accountId = accountId;
 
     return {
       code: constants.codes.OK,
-      accountId: this._accountId,
+      accountId,
     };
   }
 
@@ -504,7 +517,7 @@ class MyQ {
    * @throws {MyQError} DEVICE_NOT_FOUND
    * @throws {MyQError} DEVICE_STATE_NOT_FOUND
    */
-  async _getDeviceState(serialNumber, _stateAttribute) {
+  async _getDeviceState(serialNumber: string, _stateAttribute: string) {
     if (serialNumber === undefined) {
       throw new MyQError(
         'Serial number parameter is not specified.',
@@ -567,7 +580,7 @@ class MyQ {
    * @throws {MyQError} DEVICE_NOT_FOUND
    * @throws {MyQError} DEVICE_STATE_NOT_FOUND
    */
-  async _setDeviceState(serialNumber, _action, _stateAttribute) {
+  async _setDeviceState(serialNumber: string, _action: string, _stateAttribute: string) {
     if (serialNumber === undefined) {
       throw new MyQError(
         'Serial number parameter is not specified.',
@@ -621,16 +634,17 @@ class MyQ {
       );
     }
 
-    if (this._accountId == null) {
+    let accountId = this._accountId;
+    if (accountId == null) {
       // Fetch the account ID if we have not already. This should be fetched and cached already in a
       // normal execution flow since getDevices() needs to be called before this and that also needs
       // the account ID, but we check anyway for added safety.
-      await this._getAccountId();
+      accountId = (await this._getAccountId()).accountId;
     }
     await this._executeServiceRequest({
       baseURL: constants._baseUrls.device,
       url: constants._routes.setDevice
-        .replace('{accountId}', this._accountId)
+        .replace('{accountId}', accountId)
         .replace('{serialNumber}', serialNumber),
       method: 'put',
       data: { action_type: _action },
@@ -666,7 +680,7 @@ class MyQ {
    * @throws {MyQError} AUTHENTICATION_FAILED_LOCKED_OUT
    * @throws {MyQError} DEVICE_NOT_FOUND
    */
-  async _executeServiceRequest(_config) {
+  async _executeServiceRequest(_config: AxiosRequestConfig) {
     if (_config === undefined) {
       throw new MyQError('Config parameter is not specified.', constants.codes.INVALID_ARGUMENT);
     }
@@ -728,7 +742,4 @@ class MyQ {
   }
 }
 
-MyQ.actions = actions;
-MyQ.constants = constants;
-
-module.exports = MyQ;
+export default MyQ;

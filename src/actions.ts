@@ -8,5 +8,6 @@ const actions = {
     TURN_OFF: Symbol('turnOff'),
   }),
 };
+  
+export default actions;
 
-module.exports = actions;
