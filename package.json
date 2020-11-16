@@ -21,9 +21,9 @@
   },
   "license": "MIT",
   "author": "Thomas Munduchira <thomas@thomasmunduchira.com> (https://thomasmunduchira.com/)",
-  "main": "src/index.js",
+  "main": "dist/src/index.js",
   "files": [
-    "src"
+    "dist/src"
   ],
   "repository": {
     "type": "git",
